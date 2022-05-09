@@ -12,6 +12,7 @@ class Player {
   static bool isPlaying = false;
   static bool isPaused = false;
   static bool isShuffle = false;
+  static bool playingFromQueue = false;
   static int isLoop = 0;
   static Duration duration = Duration.zero;
   static Duration position = Duration.zero;
@@ -26,11 +27,10 @@ class Player {
   static Queue<GetSong> songQueue = Queue();
 
   void playSong(GetSong song, List<GetSong> songs) {
+    songsList = songs;
+    bool songFound = false;
+
     if (playingSong == null) {
-      songsList = songs;
-
-      bool songFound = false;
-
       for (int i = 0; i < songsList.length; i++) {
         if (songFound == false) {
           if (song.id != songsList[i].id) {
@@ -43,24 +43,39 @@ class Player {
           nextSongs.add(songsList[i]);
         }
       }
-    } else if (playingSong != null) {
-      songsList = songs;
+    } else {
       prevSongs.clear();
       currentSong.clear();
       nextSongs.clear();
 
-      bool songFound = false;
+      if (isShuffle) {
+        currentSong.add(song);
 
-      for (int i = 0; i < songsList.length; i++) {
-        if (songFound == false) {
+        List<GetSong> tempSongsList = [];
+        for (int i = 0; i < songsList.length; i++) {
           if (song.id != songsList[i].id) {
-            prevSongs.addFirst(songsList[i]);
-          } else {
-            currentSong.add(songsList[i]);
-            songFound = true;
+            tempSongsList.add(songsList[i]);
           }
-        } else {
-          nextSongs.add(songsList[i]);
+        }
+        int listLength = tempSongsList.length;
+
+        for (int i = 0; i < listLength; i++) {
+          int randomIndex = Random().nextInt(tempSongsList.length);
+          nextSongs.add(tempSongsList[randomIndex]);
+          tempSongsList.removeAt(randomIndex);
+        }
+      } else {
+        for (int i = 0; i < songsList.length; i++) {
+          if (songFound == false) {
+            if (song.id != songsList[i].id) {
+              prevSongs.addFirst(songsList[i]);
+            } else {
+              currentSong.add(songsList[i]);
+              songFound = true;
+            }
+          } else {
+            nextSongs.add(songsList[i]);
+          }
         }
       }
     }
@@ -73,11 +88,27 @@ class Player {
       isPlaying = true;
       playingSong = song;
       await player.play(songUrl + song.music!);
-    } else if (isPlaying && song.id! != playingSong!.id) {
+    } else {
       playingSong = song;
-      await player.pause();
+      await player.stop();
       await player.play(songUrl + song.music!);
     }
+  }
+
+  void pauseSong() async {
+    if (playingSong == null) {
+      return;
+    }
+    isPaused = true;
+    await player.pause();
+  }
+
+  void resumeSong() async {
+    if (playingSong == null) {
+      return;
+    }
+    isPaused = false;
+    await player.resume();
   }
 
   void autoNextSong() {
@@ -87,23 +118,32 @@ class Player {
         currentSong.add(nextSongs.removeFirst());
         startPlaying(currentSong.first);
       } else {
-        if (isLoop == 2) {
-          prevSongs.clear();
-          currentSong.clear();
-
-          for (int i = 0; i < songsList.length; i++) {
-            if (i == 0) {
-              currentSong.add(songsList[i]);
-            } else {
-              nextSongs.add(songsList[i]);
-            }
-          }
-          startPlaying(currentSong.first);
+        if (isShuffle) {
+          shuffleSongMore();
         } else {
-          return;
+          if (isLoop == 2) {
+            prevSongs.clear();
+            currentSong.clear();
+
+            for (int i = 0; i < songsList.length; i++) {
+              if (i == 0) {
+                currentSong.add(songsList[i]);
+              } else {
+                nextSongs.add(songsList[i]);
+              }
+            }
+
+            startPlaying(currentSong.first);
+          } else {
+            Player.isPaused = true;
+            return;
+          }
         }
       }
+
+      playingFromQueue = false;
     } else {
+      playingFromQueue = true;
       startPlaying(songQueue.removeFirst());
     }
   }
@@ -115,25 +155,36 @@ class Player {
         currentSong.add(nextSongs.removeFirst());
         startPlaying(currentSong.first);
       } else {
-        prevSongs.clear();
-        currentSong.clear();
+        if (isShuffle) {
+          shuffleSongMore();
+        } else {
+          prevSongs.clear();
+          currentSong.clear();
 
-        for (int i = 0; i < songsList.length; i++) {
-          if (i == 0) {
-            currentSong.add(songsList[i]);
-          } else {
-            nextSongs.add(songsList[i]);
+          for (int i = 0; i < songsList.length; i++) {
+            if (i == 0) {
+              currentSong.add(songsList[i]);
+            } else {
+              nextSongs.add(songsList[i]);
+            }
           }
-        }
 
-        startPlaying(currentSong.first);
+          startPlaying(currentSong.first);
+        }
       }
+
+      playingFromQueue = false;
     } else {
+      playingFromQueue = true;
       startPlaying(songQueue.removeFirst());
     }
   }
 
   void previousSong() {
+    if (playingFromQueue) {
+      startPlaying(currentSong.first);
+      return;
+    }
     if (prevSongs.isNotEmpty) {
       nextSongs.addFirst(currentSong.removeFirst());
       currentSong.add(prevSongs.removeFirst());
@@ -154,30 +205,47 @@ class Player {
     }
   }
 
-  void pauseSong() async {
-    if (playingSong == null) {
-      return;
-    }
-    isPaused = true;
-    await player.pause();
-  }
-
-  void resumeSong() async {
-    if (playingSong == null) {
-      return;
-    }
-    isPaused = false;
-    await player.resume();
-  }
-
   void shuffleSong() {
     isShuffle = true;
 
     prevSongs.clear();
-    currentSong.clear();
     nextSongs.clear();
 
-  
+    List<GetSong> tempSongsList = [];
+    for (int i = 0; i < songsList.length; i++) {
+      if (playingSong!.id != songsList[i].id) {
+        tempSongsList.add(songsList[i]);
+      }
+    }
+    int listLength = tempSongsList.length;
+
+    for (int i = 0; i < listLength; i++) {
+      int randomIndex = Random().nextInt(tempSongsList.length);
+      nextSongs.add(tempSongsList[randomIndex]);
+      tempSongsList.removeAt(randomIndex);
+    }
+  }
+
+  void shuffleSongMore() {
+    prevSongs.clear();
+
+    List<GetSong> tempSongsList = [];
+    for (int i = 0; i < songsList.length; i++) {
+      if (playingSong!.id != songsList[i].id) {
+        tempSongsList.add(songsList[i]);
+      }
+    }
+    int listLength = tempSongsList.length;
+
+    for (int i = 0; i < listLength; i++) {
+      int randomIndex = Random().nextInt(tempSongsList.length);
+      nextSongs.add(tempSongsList[randomIndex]);
+      tempSongsList.removeAt(randomIndex);
+    }
+
+    nextSongs.add(currentSong.removeFirst());
+    currentSong.add(nextSongs.removeFirst());
+    startPlaying(currentSong.first);
   }
 
   void stopShuffle() {

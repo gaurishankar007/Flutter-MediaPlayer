@@ -29,7 +29,7 @@ class _SongBarState extends State<SongBar> {
 
     stateSub = player.onPlayerStateChanged.listen((state) {
       setState(() {
-        Player.isPaused = state == PlayerState.PLAYING;
+        Player.isPaused = state == PlayerState.PAUSED;
         songData = Player.playingSong;
       });
     });
@@ -137,21 +137,6 @@ class _SongBarState extends State<SongBar> {
                   Player.isPaused
                       ? TextButton(
                           onPressed: () {
-                            Player().pauseSong();
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Icon(
-                            Icons.pause_sharp,
-                            size: 40,
-                            color: Colors.black,
-                          ),
-                        )
-                      : TextButton(
-                          onPressed: () {
                             Player().resumeSong();
                           },
                           style: TextButton.styleFrom(
@@ -161,6 +146,21 @@ class _SongBarState extends State<SongBar> {
                           ),
                           child: Icon(
                             Icons.play_arrow_sharp,
+                            size: 40,
+                            color: Colors.black,
+                          ),
+                        )
+                      : TextButton(
+                          onPressed: () {
+                            Player().pauseSong();
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Icon(
+                            Icons.pause_sharp,
                             size: 40,
                             color: Colors.black,
                           ),

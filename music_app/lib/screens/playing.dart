@@ -26,12 +26,8 @@ class _PlayingSongState extends State<PlayingSong> {
 
     stateSub = player.onPlayerStateChanged.listen((state) {
       setState(() {
-        Player.isPaused = state == PlayerState.PLAYING;
+        Player.isPaused = state == PlayerState.PAUSED;
       });
-    });
-
-    completionSub = player.onPlayerCompletion.listen((event) {
-      Player().autoNextSong();
     });
 
     durationSub = player.onDurationChanged.listen((newDuration) {
@@ -53,7 +49,6 @@ class _PlayingSongState extends State<PlayingSong> {
     stateSub.cancel();
     durationSub.cancel();
     positionSub.cancel();
-    completionSub.cancel();
   }
 
   @override
@@ -257,22 +252,6 @@ class _PlayingSongState extends State<PlayingSong> {
                           Player.isPaused
                               ? TextButton(
                                   onPressed: () {
-                                    Player().pauseSong();
-                                  },
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: Size.zero,
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  child: Icon(
-                                    Icons.pause_circle_filled_rounded,
-                                    size: 60,
-                                    color: Colors.black,
-                                  ),
-                                )
-                              : TextButton(
-                                  onPressed: () {
                                     Player().resumeSong();
                                   },
                                   style: TextButton.styleFrom(
@@ -283,6 +262,22 @@ class _PlayingSongState extends State<PlayingSong> {
                                   ),
                                   child: Icon(
                                     Icons.play_circle_fill_sharp,
+                                    size: 60,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : TextButton(
+                                  onPressed: () {
+                                    Player().pauseSong();
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Icon(
+                                    Icons.pause_circle_filled_rounded,
                                     size: 60,
                                     color: Colors.black,
                                   ),

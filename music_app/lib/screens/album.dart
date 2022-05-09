@@ -31,7 +31,9 @@ class _AlbumViewState extends State<AlbumView> {
     super.initState();
 
     viewSongs().then((value) {
-      songs = value;
+      setState(() {
+        songs = value;
+      });
     });
   }
 
@@ -90,10 +92,20 @@ class _AlbumViewState extends State<AlbumView> {
                       color: Colors.black,
                     ),
                   ),
-                  trailing: Text(
-                    snapshot.data![index].players!.toString(),
-                    style: TextStyle(
-                      color: Colors.black,
+                  trailing: IconButton(
+                    onPressed: () {
+                      Player.songQueue.add(GetSong(
+                        id: snapshot.data![index].id!,
+                        title: snapshot.data![index].title!,
+                        album: snapshot.data![index].album!,
+                        music: snapshot.data![index].music!,
+                        players: snapshot.data![index].players!,
+                        likes: snapshot.data![index].likes!,
+                      ));
+                    },
+                    icon: Icon(
+                      Icons.queue_play_next_rounded,
+                      color: Colors.green,
                     ),
                   ),
                 );
