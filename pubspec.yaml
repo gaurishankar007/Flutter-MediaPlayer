@@ -10,9 +10,16 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  just_audio: ^0.10.2
+  audio_service: ^0.18.18
+  get_it: ^8.0.3
+  injectable: ^2.5.0
+  flutter_riverpod: ^2.6.1
 
 dev_dependencies:
   flutter_lints: ^5.0.0
+  build_runner: ^2.4.15
+  injectable_generator: ^2.7.0
 
 flutter:
   uses-material-design: true
