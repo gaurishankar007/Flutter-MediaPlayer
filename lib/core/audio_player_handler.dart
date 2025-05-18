@@ -16,7 +16,6 @@ abstract class AppAudioHandlerModule {
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   final AudioPlayer _audioPlayer;
-  final AudioPlayer _miniAudioPlayer;
   bool _isPlayerListenerActivated = false;
 
   // Audio Player stream subscriptions
@@ -27,8 +26,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   AudioPlayerHandler({
     required AudioPlayer audioPlayer,
     required AudioPlayer miniAudioPlayer,
-  }) : _audioPlayer = audioPlayer,
-       _miniAudioPlayer = miniAudioPlayer;
+  }) : _audioPlayer = audioPlayer;
 
   // <---------- region Basic Controls ---------->
   @override
@@ -38,13 +36,38 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> pause() => _audioPlayer.pause();
 
   @override
-  Future<void> stop() => _audioPlayer.stop();
+  Future<void> stop() async {
+    await _audioPlayer.seek(Duration.zero);
+    await _audioPlayer.stop();
+  }
 
   @override
   Future<void> seek(Duration position) => _audioPlayer.seek(position);
 
   @override
   Future<void> setSpeed(double speed) => _audioPlayer.setSpeed(speed);
+
+  @override
+  Future<void> skipToPrevious() async {
+    final isFirstAudioSource = _audioPlayer.currentIndex == 0;
+    if (!isFirstAudioSource) await super.skipToPrevious();
+  }
+
+  @override
+  Future<void> skipToNext() async {
+    final isLastAudioSource =
+        _audioPlayer.currentIndex == _audioPlayer.audioSources.length - 1;
+    if (!isLastAudioSource) await super.skipToNext();
+  }
+
+  @override
+  Future<void> playMediaItem(MediaItem mediaItem) async {
+    final mediaItemIndex = queue.value.indexOf(mediaItem);
+    // If the media item does not exist in the queue
+    if (mediaItemIndex == -1) return await setMediaItems([mediaItem]);
+    // Skip to the next media item if it exists
+    await skipToQueueItem(mediaItemIndex);
+  }
   // <---------- endregion ---------->
 
   // <---------- region Playback Mode Controls ---------->
@@ -81,7 +104,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _resetPlayerState();
 
     // Update audio_service's playlist (atomic update)
-    queue.value = mediaItems;
+    queue.value = [...mediaItems];
 
     // Update just_audio's playlist
     try {
@@ -105,7 +128,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (mediaItems.isEmpty) return;
 
     // Add to audio_service's queue
-    addQueueItems(mediaItems);
+    await addQueueItems(mediaItems);
 
     // Add to just_audio's playlist
     await _audioPlayer.addAudioSources(
@@ -118,11 +141,30 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (mediaIndex == -1) return;
 
     // Remove from audio service's queue
-    removeQueueItemAt(mediaIndex);
+    await removeQueueItem(mediaItem);
 
     // Remove from just_audio's playlist
     await _audioPlayer.removeAudioSourceAt(mediaIndex);
   }
+  // <---------- endregion ---------->
+
+  // <---------- region player Streams ---------->
+  Stream<List<MediaItem>> get queueStream => queue.stream.asBroadcastStream();
+
+  Stream<MediaItem?> get mediaItemStream =>
+      mediaItem.stream.asBroadcastStream();
+
+  Stream<Duration?> get positionStream =>
+      _audioPlayer.positionStream.asBroadcastStream();
+
+  Stream<LoopMode> get loopModeStream =>
+      _audioPlayer.loopModeStream.asBroadcastStream();
+
+  Stream<bool> get shuffleModeStream =>
+      _audioPlayer.shuffleModeEnabledStream.asBroadcastStream();
+
+  Stream<bool> get playingStream =>
+      _audioPlayer.playingStream.asBroadcastStream();
   // <---------- endregion ---------->
 
   // <---------- region Listener Management
@@ -191,49 +233,43 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   void _handleProcessingStateChange(ProcessingState state) {
     if (state == ProcessingState.completed) {
-      skipToNext();
+      final isLastAudioSource =
+          _audioPlayer.currentIndex == _audioPlayer.audioSources.length - 1;
+
+      if (isLastAudioSource) {
+        stop();
+      } else {
+        skipToNext();
+      }
     }
   }
   // <---------- endregion ---------->
 
   // <---------- region Cleanup Methods ---------->
   Future<void> _resetPlayerState() async {
-    await closePlayers();
-
-    // Reset all player-related states to initial values
-    queue.add([]);
-    mediaItem.add(null);
-    queueTitle.add("");
-    playbackState.add(
-      PlaybackState(
-        controls: [],
-        systemActions: const {},
-        processingState: AudioProcessingState.idle,
-        playing: false,
-        updatePosition: Duration.zero,
-        bufferedPosition: Duration.zero,
-        speed: 1.0,
-        queueIndex: null,
-      ),
-    );
-  }
-
-  Future<void> closePlayers() async {
     try {
-      // Clear both players' audio sources in parallel
-      await Future.wait([
-        _audioPlayer.clearAudioSources(),
-        _miniAudioPlayer.clearAudioSources(),
-      ]);
-
-      // Stop both players in parallel
-      await Future.wait([_audioPlayer.stop(), _miniAudioPlayer.stop()]);
-
-      // Cancel all active listeners
+      // Clear both players' resources
+      await _audioPlayer.stop();
+      await _audioPlayer.clearAudioSources();
       await _deactivateListeners();
-
-      // Reset activation flag
       _isPlayerListenerActivated = false;
+
+      // Clear audio service resources
+      queue.add([]);
+      mediaItem.add(null);
+      queueTitle.add("");
+      playbackState.add(
+        PlaybackState(
+          controls: [],
+          systemActions: const {},
+          processingState: AudioProcessingState.idle,
+          playing: false,
+          updatePosition: Duration.zero,
+          bufferedPosition: Duration.zero,
+          speed: 1.0,
+          queueIndex: null,
+        ),
+      );
     } catch (e) {
       debugPrint('Error closing players: $e');
     }
@@ -251,13 +287,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     _playbackEventSubscription = null;
     _currentIndexSubscription = null;
     _processingStateSubscription = null;
-  }
-
-  Future<void> dispose() async {
-    await closePlayers();
-    // Permanent cleanup of player resources
-    await _audioPlayer.dispose();
-    await _miniAudioPlayer.dispose();
   }
 
   // <---------- endregion ---------->

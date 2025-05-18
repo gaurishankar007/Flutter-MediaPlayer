@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
-import 'package:player/core/audio_player_handler.dart';
-import 'package:player/injector/injector.dart';
+
+import 'core/audio_player_handler.dart';
+import 'injector/injector.dart';
 
 class AppInitializer {
   AppInitializer._();
