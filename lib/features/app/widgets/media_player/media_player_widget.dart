@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../music/views/media/media_view.dart';
 
+import '../../../music/views/media/media_view.dart';
 import '../../notifiers/audio/audio_queue_notifier.dart';
 import 'media_play_button_widget.dart';
 import 'media_seeker_widget.dart';

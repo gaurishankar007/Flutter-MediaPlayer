@@ -10,11 +10,16 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  # Audio Player
   just_audio: ^0.10.2
   audio_service: ^0.18.18
+  audio_session: ^0.2.2
+  # Dependency Locator
   get_it: ^8.0.3
   injectable: ^2.5.0
+  # State Management
   flutter_riverpod: ^2.6.1
+  # 
   equatable: ^2.0.7
 
 dev_dependencies:

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/audio_player_handler.dart';
 import 'media_loop_button_widget.dart';
 import 'media_play_button_widget.dart';
-
 import 'media_shuffle_button_widget.dart';
 
 class MediaControllerWidget extends StatelessWidget {

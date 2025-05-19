@@ -4,4 +4,4 @@ import 'package:injectable/injectable.dart';
 import 'injector.config.dart';
 
 @InjectableInit(initializerName: "initialize")
-void initializeDependencies() => GetIt.I.initialize();
+Future<void> initializeDependencies() async => await GetIt.I.initialize();

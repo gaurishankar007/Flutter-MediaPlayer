@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
@@ -9,13 +10,17 @@ import 'package:just_audio/just_audio.dart';
 @module
 abstract class AppAudioHandlerModule {
   @lazySingleton
-  AudioPlayer get player => AudioPlayer();
+  AudioPlayer get audioPlayer => AudioPlayer();
+
+  @preResolve
+  Future<AudioSession> get audioSession => AudioSession.instance;
 }
 
 @LazySingleton()
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   final AudioPlayer _audioPlayer;
+  final AudioSession _audioSession;
   bool _isPlayerListenerActivated = false;
 
   // Audio Player stream subscriptions
@@ -25,8 +30,36 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   AudioPlayerHandler({
     required AudioPlayer audioPlayer,
-    required AudioPlayer miniAudioPlayer,
-  }) : _audioPlayer = audioPlayer;
+    required AudioSession audioSession,
+  }) : _audioPlayer = audioPlayer,
+       _audioSession = audioSession;
+
+  /// Initializes the audio service and registers the [AudioPlayerHandler]
+  Future<void> initialize() async {
+    await AudioService.init(
+      builder: () => AudioHandlerUtil.I,
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'app.media.player.channel.audio',
+        androidNotificationChannelName: 'Music playback',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+      ),
+    );
+
+    // Configure the audio session for proper audio focus handling, background playback, mixing with other audio apps, etc.
+    await _audioSession.configure(AudioSessionConfiguration.music());
+
+    // 🔧 Do you need to call setActive(true) manually?
+    // No — you do not have to call it manually.
+    // ✅ The just_audio plugin automatically activates the audio session when it starts playback.
+    //
+    // 🧠 When would you manually set the session active?
+    // Only in advanced cases, such as:
+    // - You are not using just_audio for playback (e.g., raw dart:html audio on web, platform channels)
+    // - You want to pre-warm the session before playing (e.g., to reduce delay)
+    // - You need very fine-grained control (e.g., temporarily hold audio focus even if nothing is playing)
+    // But for standard use with just_audio + audio_service, you don’t need to call it yourself.
+  }
 
   // <---------- region Basic Controls ---------->
   @override

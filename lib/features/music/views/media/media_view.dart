@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../app/widgets/media_player/media_controller_widget.dart';
-import '../../../app/widgets/media_player/media_seeker_widget.dart';
 
 import '../../../app/notifiers/audio/audio_queue_notifier.dart';
+import '../../../app/widgets/media_player/media_controller_widget.dart';
 import '../../../app/widgets/media_player/media_progress_widget.dart';
+import '../../../app/widgets/media_player/media_seeker_widget.dart';
 
 class MediaView extends ConsumerWidget {
   const MediaView({super.key});
