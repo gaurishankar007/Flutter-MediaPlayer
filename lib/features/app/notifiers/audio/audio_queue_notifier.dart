@@ -9,7 +9,7 @@ import '../../../../core/audio_player_handler.dart';
 
 part 'audio_queue_state.dart';
 
-final audioQueueProvider = StateNotifierProvider(
+final audioQueueProvider = StateNotifierProvider.autoDispose(
   (_) => AudioQueueNotifier(audioHandler: GetIt.I<AudioPlayerHandler>()),
 );
 

@@ -127,7 +127,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> setMediaItems(
     List<MediaItem> mediaItems, {
     int initialIndex = 0,
-    bool autoPlay = true,
   }) async {
     // Discard operation on invalid arguments
     bool invalidIndex = initialIndex < 0 || initialIndex >= mediaItems.length;
@@ -148,9 +147,6 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       // Activate listeners after sources are set
       _activateListeners();
-
-      // Start playback if requested
-      if (autoPlay) await play();
     } catch (e) {
       debugPrint('Error setting media items: $e');
       rethrow;
@@ -225,7 +221,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _handlePlaybackEvent(PlaybackEvent event) {
     playbackState.add(
       playbackState.value.copyWith(
-        controls: _buildMediaControls(),
+        controls: [
+          MediaControl.skipToPrevious,
+          if (_audioPlayer.playing) MediaControl.pause else MediaControl.play,
+          MediaControl.skipToNext,
+          MediaControl.stop,
+        ],
         systemActions: const {
           MediaAction.seek,
           MediaAction.seekForward,
@@ -240,13 +241,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       ),
     );
   }
-
-  List<MediaControl> _buildMediaControls() => [
-    MediaControl.skipToPrevious,
-    if (_audioPlayer.playing) MediaControl.pause else MediaControl.play,
-    MediaControl.skipToNext,
-    MediaControl.stop,
-  ];
 
   AudioProcessingState _convertProcessingState(ProcessingState state) {
     return switch (state) {
@@ -282,7 +276,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> _resetPlayerState() async {
     try {
       // Clear both players' resources
-      await _audioPlayer.stop();
+      await stop();
       await _audioPlayer.clearAudioSources();
       await _deactivateListeners();
       _isPlayerListenerActivated = false;
@@ -320,6 +314,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     _playbackEventSubscription = null;
     _currentIndexSubscription = null;
     _processingStateSubscription = null;
+  }
+
+  Future<void> closePlayer() async {
+    await _resetPlayerState();
+    await _audioPlayer.dispose();
   }
 
   // <---------- endregion ---------->
