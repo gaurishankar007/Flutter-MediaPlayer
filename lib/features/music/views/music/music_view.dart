@@ -22,12 +22,6 @@ class MusicView extends StatelessWidget {
           ),
           SizedBox(height: 8),
           MusicAlbumListWidget(),
-          SizedBox(height: 16),
-          Text(
-            "Preview Songs",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
         ],
       ),
     );
